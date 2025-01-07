@@ -4,8 +4,7 @@ from datetime import datetime, timedelta
 import re
 
 # Remplacez "YOUR_TOKEN" par votre clé API de BotFather
-import os
-TOKEN = os.getenv("TOKEN")
+TOKEN = "7685304448:AAEuMefo6gvKOydyTtRv6pVXLMxvTuJfWr4"
 
 # Dictionnaire pour stocker les données utilisateur
 user_data = {}
