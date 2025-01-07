@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Créez l'application avec votre clé Telegram
 app = Application.builder().token("7685304448:AAEuMefo6gvKOydyTtRv6pVXLMxvTuJfWr4").build()
@@ -38,7 +38,7 @@ LANGUAGES = {
         ),
         "add_success": (
             "✨ Très bien {name}, j'ai ajouté ça : {start} - {end} avec {pause} min de pause.\n"
-            "Total d'heures travaillées : {hours:.2f} heures.\n\n"
+            "Total d'heures travaillées : {hours}.\n\n"
             "Continue comme ça. 🤓"
         ),
         "invalid_format": (
@@ -71,12 +71,14 @@ def parse_time_format(time_str):
         return None
     return f"{hours:02}:{minutes:02}"
 
-def calculate_hours(start, end, pause):
-    """Calcule les heures travaillées en déduisant la pause."""
+def calculate_hours_minutes(start, end, pause):
+    """Calcule les heures et minutes travaillées en déduisant la pause."""
     start_time = datetime.strptime(start, "%H:%M")
     end_time = datetime.strptime(end, "%H:%M")
-    duration = (end_time - start_time).seconds / 3600  # Convertir en heures
-    return max(0, duration - pause / 60)  # Soustraire la pause
+    duration = (end_time - start_time).seconds // 60  # Convertir en minutes
+    total_minutes = max(0, duration - pause)
+    hours, minutes = divmod(total_minutes, 60)
+    return f"{hours}h{minutes:02}"  # Format HHhMM
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     first_name = update.message.from_user.first_name
@@ -111,16 +113,16 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(LANGUAGES[lang]["invalid_time"])
         return
 
-    hours = calculate_hours(start, end, pause)
+    hours_worked = calculate_hours_minutes(start, end, pause)
 
     if user_id not in user_data:
         user_data[user_id] = {"sessions": [], "language": "fr", "total_hours": 0}
 
     user_data[user_id]["sessions"].append(f"{start}-{end} (Pause : {pause} min)")
-    user_data[user_id]["total_hours"] += hours
+    user_data[user_id]["total_hours"] = hours_worked
 
     await update.message.reply_text(
-        LANGUAGES[lang]["add_success"].format(name=first_name, start=start, end=end, pause=pause, hours=user_data[user_id]["total_hours"])
+        LANGUAGES[lang]["add_success"].format(name=first_name, start=start, end=end, pause=pause, hours=hours_worked)
     )
 
 async def recap(update: Update, context: ContextTypes.DEFAULT_TYPE):
