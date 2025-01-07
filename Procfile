@@ -1,1 +1,1 @@
-worker: python ontime_bot.py
+worker: python ontime_bot.py > Procfile
