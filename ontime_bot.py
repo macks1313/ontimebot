@@ -140,3 +140,7 @@ async def save_session(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_data[user_id]["sessions"].append(user_data[user_id]["current_session"])
     user_data[user_id].pop("current_session")
     await update.message.reply_text(LANGUAGES[lang]["session_saved"])
+
+if __name__ == "__main__":
+    application.run_polling()
+
