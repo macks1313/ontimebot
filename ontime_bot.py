@@ -1,6 +1,5 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
-import re
 
 # Data storage for work hours
 data = {}
