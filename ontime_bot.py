@@ -11,69 +11,75 @@ def escape_markdown_v2(text):
         text = text.replace(char, f"\\{char}")
     return text
 
-# Dictionnaire des messages en plusieurs langues
+# Dictionnaire des messages sarcastiques en plusieurs langues
 LANGUAGES = {
     "fr": {
         "start_message": (
-            "Bonjour {name} ! Je suis là pour vous aider à suivre vos horaires de travail.\n\n"
-            "Voici les commandes que je comprends :\n"
-            "/start - Me démarrer.\n"
-            "/help - Voir la liste des commandes.\n"
-            "/language - Changer ma langue (Anglais, Français, Ukrainien).\n"
-            "/add - Ajouter des horaires de travail (formats acceptés : HH:MM, HHhMM, HhMM).\n"
-            "/recap - Obtenir un résumé de vos sessions enregistrées.\n"
-            "/save_session - Enregistrer la session actuelle.\n\n"
-            "Que puis-je faire pour vous aujourd'hui ? 😊"
+            "✨ Bonjour {name} !\n\n"
+            "Je suis ton assistant bot 🤖, prêt à… enfin… me débrouiller pour suivre tes horaires de travail, car apparemment tu ne peux pas le faire toi-même. 😏\n\n"
+            "Voici ce que je peux faire pour toi :\n"
+            "/start - Me démarrer. Bravo, tu viens déjà de le faire.\n"
+            "/add - Ajouter des horaires (formats acceptés : HH:MM, HHhMM, HhMM).\n"
+            "/recap - Obtenir un magnifique récapitulatif de ton labeur épique.\n"
+            "/delete - Supprimer toutes tes données, comme si je n’avais jamais existé. 🙃\n"
+            "/language - Changer ma langue (Anglais, Français, Ukrainien).\n\n"
+            "Maintenant, dis-moi, ô maître, que puis-je faire pour toi aujourd'hui ? 😎"
         ),
-        "add_success": "Très bien {name}, j'ai ajouté ça à votre session. Heures totales travaillées : {hours:.2f} heures.",
-        "invalid_format": "Je n'ai pas compris le format. Essayez l'un des formats suivants : HH:MM, HHhMM ou HhMM.",
-        "no_sessions": "Vous n'avez enregistré aucune session pour l'instant.",
-        "recap_header": "Voici un récapitulatif de vos sessions :",
-        "session_saved": "Session actuelle sauvegardée avec succès.",
-        "no_active_session": "Aucune session active à sauvegarder.",
+        "add_success": (
+            "✨ Très bien {name}, j'ai ajouté ça à ta session. Total d'heures travaillées : {hours:.2f} heures.\n\n"
+            "Tu progresses, petit génie. Continue comme ça. 🤓"
+        ),
+        "invalid_format": "Euh… pardon ? Ce format est incompréhensible. Essaie : HH:MM, HHhMM ou HhMM. 🧐",
+        "no_sessions": "Tu n'as enregistré aucune session. Félicitations pour ton inactivité. 👏",
+        "recap_header": "📋 Voici un récapitulatif de tes sessions de travail incroyablement inspirantes :\n",
+        "data_deleted": "🚮 Toutes tes données ont été supprimées. J'espère que c'était intentionnel. 🙄",
     },
     "en": {
         "start_message": (
-            "Hello {name}! I'm here to help you track your working hours.\n\n"
-            "Here are the commands I understand:\n"
-            "/start - Start me.\n"
-            "/help - See the list of commands.\n"
-            "/language - Change my language (English, French, Ukrainian).\n"
+            "✨ Hello {name}!\n\n"
+            "I'm your assistant bot 🤖, here to… well… try my best to track your working hours, since you clearly can't. 😏\n\n"
+            "Here’s what I can do for you:\n"
+            "/start - Start me. Congrats, you've already done it.\n"
             "/add - Add working hours (formats accepted: HH:MM, HHhMM, HhMM).\n"
-            "/recap - Get a summary of your saved sessions.\n"
-            "/save_session - Save the current session.\n\n"
-            "How can I assist you today? 😊"
+            "/recap - Get a wonderful summary of your epic labor.\n"
+            "/delete - Erase all your data, like I never existed. 🙃\n"
+            "/language - Change my language (English, French, Ukrainian).\n\n"
+            "So, tell me, oh master, what can I do for you today? 😎"
         ),
-        "add_success": "Alright {name}, I've added that to your session. Total hours worked: {hours:.2f} hours.",
-        "invalid_format": "I couldn't understand the format. Try one of the following formats: HH:MM, HHhMM, or HhMM.",
-        "no_sessions": "You have no recorded sessions yet.",
-        "recap_header": "Here is a summary of your sessions:",
-        "session_saved": "Current session successfully saved.",
-        "no_active_session": "No active session to save.",
+        "add_success": (
+            "✨ Alright {name}, I’ve added that to your session. Total hours worked: {hours:.2f} hours.\n\n"
+            "You're doing great, Einstein. Keep it up. 🤓"
+        ),
+        "invalid_format": "Uh… sorry? That format makes no sense. Try: HH:MM, HHhMM, or HhMM. 🧐",
+        "no_sessions": "You haven’t recorded any sessions. Congrats on your inactivity. 👏",
+        "recap_header": "📋 Here’s a summary of your incredibly inspiring work sessions:\n",
+        "data_deleted": "🚮 All your data has been deleted. I hope that was intentional. 🙄",
     },
     "uk": {
         "start_message": (
-            "Привіт {name}! Я тут, щоб допомогти вам відстежувати години роботи.\n\n"
-            "Ось команди, які я розумію:\n"
-            "/start - Запустити мене.\n"
-            "/help - Подивитися список команд.\n"
-            "/language - Змінити мою мову (Англійська, Французька, Українська).\n"
+            "✨ Привіт {name}!\n\n"
+            "Я твій бот-асистент 🤖, який допоможе відстежувати твої години роботи, бо ти сам цього не можеш, так? 😏\n\n"
+            "Ось що я можу зробити для тебе:\n"
+            "/start - Запустити мене. Вітаю, ти вже це зробив.\n"
             "/add - Додати години роботи (формати: HH:MM, HHhMM, HhMM).\n"
-            "/recap - Отримати зведення ваших сесій.\n"
-            "/save_session - Зберегти поточну сесію.\n\n"
-            "Чим я можу вам допомогти сьогодні? 😊"
+            "/recap - Отримати чудове зведення твоєї епічної праці.\n"
+            "/delete - Видалити всі твої дані, ніби мене ніколи не було. 🙃\n"
+            "/language - Змінити мову (Англійська, Французька, Українська).\n\n"
+            "Ну що, командуй, мій господарю. Що я можу зробити для тебе сьогодні? 😎"
         ),
-        "add_success": "Гаразд {name}, я додав це до вашої сесії. Загальна кількість годин: {hours:.2f} год.",
-        "invalid_format": "Я не зрозумів формат. Спробуйте один із наступних форматів: HH:MM, HHhMM або HhMM.",
-        "no_sessions": "У вас ще немає збережених сесій.",
-        "recap_header": "Ось зведення ваших сесій:",
-        "session_saved": "Поточну сесію успішно збережено.",
-        "no_active_session": "Немає активної сесії для збереження.",
+        "add_success": (
+            "✨ Добре, {name}, я додав це до твоєї сесії. Загальна кількість годин: {hours:.2f} год.\n\n"
+            "Молодець, генію. Продовжуй у тому ж дусі. 🤓"
+        ),
+        "invalid_format": "Емм… вибачте? Цей формат незрозумілий. Спробуйте: HH:MM, HHhMM або HhMM. 🧐",
+        "no_sessions": "Ти ще не записав жодної сесії. Вітаю з бездіяльністю. 👏",
+        "recap_header": "📋 Ось підсумок твоїх неймовірно надихаючих робочих сесій:\n",
+        "data_deleted": "🚮 Всі твої дані були видалені. Сподіваюся, це було навмисно. 🙄",
     },
 }
 from datetime import datetime
 
-# Fonction pour obtenir la langue d'un utilisateur
+# Gestion des données utilisateur
 user_data = {}
 
 def get_language(user_id):
@@ -112,7 +118,6 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id not in user_data:
         user_data[user_id] = {"sessions": [], "language": "fr", "total_hours": 0}
 
-    # Extraire l'horaire
     try:
         time_range = message.split(" ")[1]
         start, end = time_range.split("-")
@@ -124,6 +129,8 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_data[user_id]["current_session"] = []
 
         user_data[user_id]["current_session"].append(f"{start}-{end}")
+        user_data[user_id]["sessions"].append(user_data[user_id]["current_session"])
+        user_data[user_id]["current_session"] = []
         user_data[user_id]["total_hours"] += hours
 
         await update.message.reply_text(
@@ -146,12 +153,21 @@ async def recap(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(recap_message)
 
+async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    lang = get_language(user_id)
+
+    if user_id in user_data:
+        user_data.pop(user_id)
+
+    await update.message.reply_text(LANGUAGES[lang]["data_deleted"])
+
 # Ajout des handlers
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("add", add))
 app.add_handler(CommandHandler("recap", recap))
+app.add_handler(CommandHandler("delete", delete))
 
 # Lancement du bot
 if __name__ == "__main__":
     app.run_polling()
-
