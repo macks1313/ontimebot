@@ -1,200 +1,160 @@
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, Filters, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from transformers import pipeline
 
-# Charger un modèle Hugging Face (GPT-2 utilisé ici comme exemple)
-generator = pipeline("text-generation", model="gpt2")
+# Configuration du modèle Hugging Face
+ai_pipeline = pipeline("text-generation", model="gpt2")  # Tu peux remplacer par un autre modèle Hugging Face.
 
-# Créez l'application avec votre clé Telegram
-app = Application.builder().token("VOTRE_TOKEN_TELEGRAM").build()
+# Crée l'application avec ton token Telegram
+app = Application.builder().token("7685304448:AAEuMefo6gvKOydyTtRv6pVXLMxvTuJfWr4").build()
 
-# Fonction utilitaire pour échapper les caractères spéciaux pour MarkdownV2
+# Fonction pour échapper les caractères spéciaux pour MarkdownV2
 def escape_markdown_v2(text):
-    special_characters = r"_[]()~`>#+-=|{}.!"
+    special_characters = r"_*[]()~`>#+-=|{}.!"
     for char in special_characters:
         text = text.replace(char, f"\\{char}")
     return text
 
-# Dictionnaire des messages en plusieurs langues
+# Dictionnaire des messages multilingues
 LANGUAGES = {
     "fr": {
-        "start_message": (
-            "Bonjour ! Je suis votre assistant. Voici ce que je peux faire :\n\n"
-            "Commandes disponibles :\n"
-            "/add [heure début] [heure fin] [minutes pause] - Ajouter vos horaires de travail.\n"
-            "/info - Voir comment fonctionne le bot.\n"
-            "/clear - Supprimer toutes vos données.\n\n"
-            "💡 Vous pouvez aussi me poser des questions ou discuter avec moi directement."
+        "start_message": "Bonjour ! Je suis ton assistant intelligent 🤖. Utilise /add pour ajouter des heures ou commence une discussion pour voir ce que je peux faire !",
+        "help_message": (
+            "Voici les commandes disponibles :\n"
+            "👉 /start - Démarrer le bot\n"
+            "👉 /add [horaire début] [horaire fin] [pause en minutes] - Calculer les heures travaillées\n"
+            "👉 /delete - Supprimer toutes les données enregistrées\n"
+            "👉 /info - En savoir plus sur le fonctionnement du bot\n"
         ),
-        "add_success": "C'est ajouté. Temps travaillé calculé avec succès.",
-        "no_sessions": "Aucune session enregistrée pour le moment.",
-        "session_saved": "Session sauvegardée.",
-        "data_cleared": "Toutes vos données ont été supprimées.",
-        "ai_response": "Voici ce que je pense :"
+        "info_message": (
+            "La commande /add fonctionne ainsi :\n"
+            "1️⃣ Fournis les horaires de début et de fin au format 08h30, 17h45 ou 10:15.\n"
+            "2️⃣ Indique la durée de pause en minutes (optionnelle).\n"
+            "Je calcule pour toi les heures travaillées avec précision !\n\n"
+            "Parle-moi librement pour utiliser mon IA. 😊"
+        ),
+        "data_deleted": "Toutes les données ont été supprimées 🗑️.",
     },
     "en": {
-        "start_message": (
-            "Hello! I'm your assistant. Here's what I can do:\n\n"
-            "Available commands:\n"
-            "/add [start time] [end time] [break minutes] - Add your work hours.\n"
-            "/info - Learn how this bot works.\n"
-            "/clear - Delete all your data.\n\n"
-            "💡 You can also ask me questions or chat with me directly."
+        "start_message": "Hello! I'm your smart assistant 🤖. Use /add to add hours or start chatting to see what I can do!",
+        "help_message": (
+            "Here are the available commands:\n"
+            "👉 /start - Start the bot\n"
+            "👉 /add [start time] [end time] [pause in minutes] - Calculate working hours\n"
+            "👉 /delete - Delete all saved data\n"
+            "👉 /info - Learn more about how the bot works\n"
         ),
-        "add_success": "Added successfully. Work hours calculated.",
-        "no_sessions": "No sessions recorded yet.",
-        "session_saved": "Session saved.",
-        "data_cleared": "All your data has been cleared.",
-        "ai_response": "Here's my response:"
+        "info_message": (
+            "The /add command works as follows:\n"
+            "1️⃣ Provide start and end times in the format 08h30, 17h45, or 10:15.\n"
+            "2️⃣ Specify the break duration in minutes (optional).\n"
+            "I'll calculate the worked hours for you with precision!\n\n"
+            "Feel free to talk to me to use my AI. 😊"
+        ),
+        "data_deleted": "All data has been deleted 🗑️.",
     },
 }
 
-# Fonction utilitaire pour obtenir la langue d'un utilisateur
-def get_language(user_id):
-    return user_data.get(user_id, {}).get("language", "fr")
 # Dictionnaire global pour stocker les données utilisateur
 user_data = {}
 
+# Fonction utilitaire pour obtenir la langue de l'utilisateur
+def get_language(user_id):
+    return user_data.get(user_id, {}).get("language", "fr")  # Par défaut, français.
+
 # Commande /start
-async def start(update: Update, context: ContextTypes.DEFAULT
-_TYPE):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    if user_id not in user_data:
-        user_data[user_id] = {"sessions": [], "language": "fr"}
+    user_data[user_id] = {"sessions": [], "language": "fr"}  # Par défaut, français.
     lang = get_language(user_id)
     await update.message.reply_text(LANGUAGES[lang]["start_message"])
 
-# Commande /add pour ajouter une session de travail
+# Commande /help
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    lang = get_language(user_id)
+    await update.message.reply_text(LANGUAGES[lang]["help_message"])
+import re
+from datetime import datetime, timedelta
+
+# Commande /add
 async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    message = update.message.text
     lang = get_language(user_id)
 
     try:
-        parts = message.split()[1:]
-        start_time = parts[0]
-        end_time = parts[1]
-        break_minutes = int(parts[2]) if len(parts) > 2 else 0
+        # Analyse des arguments
+        args = context.args
+        if len(args) < 2:
+            raise ValueError("Pas assez d'arguments.")
 
-        # Calculer le temps de travail
-        start_hour, start_minute = map(int, start_time.replace("h", ":").split(":"))
-        end_hour, end_minute = map(int, end_time.replace("h", ":").split(":"))
+        start_time = args[0]
+        end_time = args[1]
+        pause_minutes = int(args[2]) if len(args) > 2 else 0
 
-        total_minutes = ((end_hour * 60 + end_minute) - (start_hour * 60 + start_minute)) - break_minutes
-        worked_hours = total_minutes // 60
-        worked_minutes = total_minutes % 60
+        # Fonction pour analyser les heures
+        def parse_time(time_str):
+            formats = ["%Hh%M", "%H:%M", "%Hh%M", "%H:%M", "%H%M"]
+            for fmt in formats:
+                try:
+                    return datetime.strptime(time_str, fmt)
+                except ValueError:
+                    continue
+            raise ValueError(f"Format d'heure invalide : {time_str}")
 
+        start = parse_time(start_time)
+        end = parse_time(end_time)
+
+        # Calcul des heures travaillées
+        work_duration = end - start
+        if work_duration.total_seconds() < 0:
+            work_duration += timedelta(days=1)  # Pour gérer les horaires après minuit
+
+        work_duration -= timedelta(minutes=pause_minutes)
+
+        # Formatage des heures
+        hours, remainder = divmod(work_duration.total_seconds(), 3600)
+        minutes = remainder // 60
+        result = f"{int(hours)}h{int(minutes):02d}"
+
+        # Sauvegarder automatiquement
         if user_id not in user_data:
             user_data[user_id] = {"sessions": [], "language": "fr"}
-
-        user_data[user_id]["sessions"].append({
-            "start": start_time,
-            "end": end_time,
-            "break": break_minutes,
-            "worked": f"{worked_hours}h{worked_minutes:02d}"
-        })
-
-        await update.message.reply_text(
-            f"{LANGUAGES[lang]['add_success']}\nTemps travaillé : {worked_hours}h{worked_minutes:02d}."
-        )
-    except (IndexError, ValueError):
-        await update.message.reply_text(
-            "Format invalide. Essayez comme ça : /add 10h28 20h35 25"
+        user_data[user_id]["sessions"].append(
+            {"start": start_time, "end": end_time, "pause": pause_minutes, "worked": result}
         )
 
-# Commande /clear pour supprimer toutes les données utilisateur
-async def clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await update.message.reply_text(f"✅ Vous avez travaillé {result} (pause déduite).")
+    except ValueError as e:
+        await update.message.reply_text(f"⚠️ Erreur : {e}")
+
+# Commande /delete
+async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     lang = get_language(user_id)
 
     if user_id in user_data:
-        user_data.pop(user_id)
-    await update.message.reply_text(LANGUAGES[lang]["data_cleared"])
+        user_data[user_id]["sessions"] = []
+        await update.message.reply_text(LANGUAGES[lang]["data_deleted"])
+    else:
+        await update.message.reply_text("⚠️ Aucune donnée à supprimer.")
 
-# Commande /info pour expliquer le fonctionnement
+# Commande /info
 async def info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     lang = get_language(user_id)
-    await update.message.reply_text(LANGUAGES[lang]["start_message"])
-_TYPE):
-    user_id = update.message.from_user.id
-    if user_id not in user_data:
-        user_data[user_id] = {"sessions": [], "language": "fr"}
-    lang = get_language(user_id)
-    await update.message.reply_text(LANGUAGES[lang]["start_message"])
+    await update.message.reply_text(LANGUAGES[lang]["info_message"])
 
-# Commande /add pour ajouter une session de travail
-async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
-    message = update.message.text
-    lang = get_language(user_id)
-
-    try:
-        parts = message.split()[1:]
-        start_time = parts[0]
-        end_time = parts[1]
-        break_minutes = int(parts[2]) if len(parts) > 2 else 0
-
-        # Calculer le temps de travail
-        start_hour, start_minute = map(int, start_time.replace("h", ":").split(":"))
-        end_hour, end_minute = map(int, end_time.replace("h", ":").split(":"))
-
-        total_minutes = ((end_hour * 60 + end_minute) - (start_hour * 60 + start_minute)) - break_minutes
-        worked_hours = total_minutes // 60
-        worked_minutes = total_minutes % 60
-
-        if user_id not in user_data:
-            user_data[user_id] = {"sessions": [], "language": "fr"}
-
-        user_data[user_id]["sessions"].append({
-            "start": start_time,
-            "end": end_time,
-            "break": break_minutes,
-            "worked": f"{worked_hours}h{worked_minutes:02d}"
-        })
-
-        await update.message.reply_text(
-            f"{LANGUAGES[lang]['add_success']}\nTemps travaillé : {worked_hours}h{worked_minutes:02d}."
-        )
-    except (IndexError, ValueError):
-        await update.message.reply_text(
-            "Format invalide. Essayez comme ça : /add 10h28 20h35 25"
-        )
-
-# Commande /clear pour supprimer toutes les données utilisateur
-async def clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
-    lang = get_language(user_id)
-
-    if user_id in user_data:
-        user_data.pop(user_id)
-    await update.message.reply_text(LANGUAGES[lang]["data_cleared"])
-
-# Commande /info pour expliquer le fonctionnement
-async def info(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
-    lang = get_language(user_id)
-    await update.message.reply_text(LANGUAGES[lang]["start_message"])
-# Fonction pour traiter les messages non associés à des commandes (discussions avec l'IA)
+# Gérer les messages texte
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
-    lang = get_language(user_id)
-    message = update.message.text
+    user_message = update.message.text
+    response = ai_pipeline(user_message, max_length=50, num_return_sequences=1)[0]["generated_text"]
+    await update.message.reply_text(response)
 
-    try:
-        response = generator(message, max_length=50, num_return_sequences=1)
-        ai_text = response[0]["generated_text"]
-        await update.message.reply_text(f"{LANGUAGES[lang]['ai_response']}\n{ai_text}")
-    except Exception as e:
-        await update.message.reply_text("Désolé, une erreur est survenue avec l'IA.")
-
-# Ajout des handlers au bot
+# Ajout des gestionnaires de commandes
 app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("help", help_command))
 app.add_handler(CommandHandler("add", add))
-app.add_handler(CommandHandler("clear", clear))
+app.add_handler(CommandHandler("delete", delete))
 app.add_handler(CommandHandler("info", info))
-app.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-
-# Démarrage du bot
-if __name__ == "__main__":
-    app.run_polling()
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
