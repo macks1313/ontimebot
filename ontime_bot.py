@@ -17,20 +17,36 @@ LANGUAGES = {
     "fr": {
         "start_message": (
             "✨ Bonjour {name} !\n\n"
-            "Je suis ton assistant bot 🤖, prêt à suivre tes horaires de travail, car apparemment tu ne peux pas le faire toi-même. 😏\n\n"
+            "Je suis ton assistant bot 🤖, prêt à suivre tes horaires de travail. 😏\n\n"
             "Voici ce que je peux faire pour toi :\n"
             "/start - Me démarrer.\n"
-            "/add - Ajouter des horaires (formats acceptés : HHhMM, HH:MM, HhMM, etc.).\n"
-            "/recap - Obtenir un récapitulatif de ton labeur épique.\n"
-            "/delete - Supprimer toutes tes données.\n\n"
-            "Dis-moi, ô maître, que puis-je faire pour toi aujourd'hui ? 😎"
+            "/add - Ajouter des horaires avec pause (ex. : /add 10h28 20h35 25).\n"
+            "/recap - Obtenir un récapitulatif de ton travail.\n"
+            "/delete - Supprimer toutes tes données.\n"
+            "/info - Voir les instructions pour utiliser /add.\n\n"
+            "Alors, prêt à commencer ? 🚀"
+        ),
+        "info_message": (
+            "💡 **Comment utiliser la commande /add ?**\n\n"
+            "La commande /add fonctionne ainsi :\n"
+            "`/add [début] [fin] [pause]`\n\n"
+            "**Exemple :** `/add 10h28 20h35 25`\n"
+            "- `10h28` : Heure de début.\n"
+            "- `20h35` : Heure de fin.\n"
+            "- `25` : Minutes de pause.\n\n"
+            "Je calculerai automatiquement le temps travaillé en déduisant la pause. 🕒"
         ),
         "add_success": (
-            "✨ Très bien {name}, j'ai ajouté ça à ta session. Total d'heures travaillées : {hours:.2f} heures.\n\n"
+            "✨ Très bien {name}, j'ai ajouté ça : {start} - {end} avec {pause} min de pause.\n"
+            "Total d'heures travaillées : {hours:.2f} heures.\n\n"
             "Continue comme ça. 🤓"
         ),
-        "invalid_format": "Euh… pardon ? Ce format est incompréhensible. Essaie : HHhMM, HH:MM ou HhMM. 🧐",
-        "invalid_time": "⏰ Les horaires que tu as entrés sont invalides. Essaye encore. 😒",
+        "invalid_format": (
+            "❌ Format invalide. Utilise `/add [début] [fin] [pause]` (ex. : `/add 10h28 20h35 25`)."
+        ),
+        "invalid_time": (
+            "⏰ Les horaires que tu as entrés sont invalides. Essaye encore. 😒"
+        ),
         "no_sessions": "Tu n'as enregistré aucune session. Félicitations pour ton inactivité. 👏",
         "recap_header": "📋 Voici un récapitulatif de tes sessions de travail :\n",
         "data_deleted": "🚮 Toutes tes données ont été supprimées.",
@@ -55,53 +71,57 @@ def parse_time_format(time_str):
         return None
     return f"{hours:02}:{minutes:02}"
 
-def calculate_hours(start, end):
-    """Calcule les heures entre deux horaires."""
+def calculate_hours(start, end, pause):
+    """Calcule les heures travaillées en déduisant la pause."""
     start_time = datetime.strptime(start, "%H:%M")
     end_time = datetime.strptime(end, "%H:%M")
     duration = (end_time - start_time).seconds / 3600  # Convertir en heures
-    return duration
-
+    return max(0, duration - pause / 60)  # Soustraire la pause
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     first_name = update.message.from_user.first_name
     user_data[user_id] = {"sessions": [], "language": "fr", "total_hours": 0}
     lang = get_language(user_id)
     await update.message.reply_text(LANGUAGES[lang]["start_message"].format(name=first_name))
+
+async def info(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    lang = get_language(user_id)
+    await update.message.reply_text(LANGUAGES[lang]["info_message"])
+
 async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     first_name = update.message.from_user.first_name
     lang = get_language(user_id)
-    message = update.message.text
+    message = update.message.text.split(" ")
+
+    if len(message) != 4:  # Vérifie qu'il y a exactement trois arguments
+        await update.message.reply_text(LANGUAGES[lang]["invalid_format"])
+        return
+
+    start = parse_time_format(message[1])
+    end = parse_time_format(message[2])
+    try:
+        pause = int(message[3])  # Pause en minutes
+    except ValueError:
+        await update.message.reply_text(LANGUAGES[lang]["invalid_format"])
+        return
+
+    if not start or not end or pause < 0:
+        await update.message.reply_text(LANGUAGES[lang]["invalid_time"])
+        return
+
+    hours = calculate_hours(start, end, pause)
 
     if user_id not in user_data:
         user_data[user_id] = {"sessions": [], "language": "fr", "total_hours": 0}
 
-    try:
-        time_range = message.split(" ")[1]
-        start, end = time_range.split("-")
-        start = parse_time_format(start)
-        end = parse_time_format(end)
+    user_data[user_id]["sessions"].append(f"{start}-{end} (Pause : {pause} min)")
+    user_data[user_id]["total_hours"] += hours
 
-        if not start or not end:
-            await update.message.reply_text(LANGUAGES[lang]["invalid_time"])
-            return
-
-        hours = calculate_hours(start, end)
-
-        if "current_session" not in user_data[user_id]:
-            user_data[user_id]["current_session"] = []
-
-        user_data[user_id]["current_session"].append(f"{start}-{end}")
-        user_data[user_id]["sessions"].append(user_data[user_id]["current_session"])
-        user_data[user_id]["current_session"] = []
-        user_data[user_id]["total_hours"] += hours
-
-        await update.message.reply_text(
-            LANGUAGES[lang]["add_success"].format(name=first_name, hours=user_data[user_id]["total_hours"])
-        )
-    except (ValueError, IndexError):
-        await update.message.reply_text(LANGUAGES[lang]["invalid_format"])
+    await update.message.reply_text(
+        LANGUAGES[lang]["add_success"].format(name=first_name, start=start, end=end, pause=pause, hours=user_data[user_id]["total_hours"])
+    )
 
 async def recap(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
@@ -113,7 +133,7 @@ async def recap(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     recap_message = LANGUAGES[lang]["recap_header"]
     for idx, session in enumerate(user_data[user_id]["sessions"], start=1):
-        recap_message += f"\n{idx}. {', '.join(session)}"
+        recap_message += f"\n{idx}. {session}"
 
     await update.message.reply_text(recap_message)
 
@@ -128,6 +148,7 @@ async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Ajout des handlers
 app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("info", info))
 app.add_handler(CommandHandler("add", add))
 app.add_handler(CommandHandler("recap", recap))
 app.add_handler(CommandHandler("delete", delete))
