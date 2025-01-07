@@ -5,51 +5,41 @@ from datetime import datetime, timedelta
 # Créez l'application avec votre clé Telegram
 app = Application.builder().token("7685304448:AAEuMefo6gvKOydyTtRv6pVXLMxvTuJfWr4").build()
 
-# Fonction utilitaire pour échapper les caractères spéciaux pour MarkdownV2
-def escape_markdown_v2(text):
-    special_characters = r"_*[]()~`>#+-=|{}.!"
-    for char in special_characters:
-        text = text.replace(char, f"\\{char}")
-    return text
-
-# Dictionnaire des messages sarcastiques en plusieurs langues
+# Messages sarcastiques
 LANGUAGES = {
     "fr": {
         "start_message": (
             "✨ Bonjour {name} !\n\n"
-            "Je suis ton assistant bot 🤖, prêt à suivre tes horaires de travail. 😏\n\n"
-            "Voici ce que je peux faire pour toi :\n"
-            "/start - Me démarrer.\n"
-            "/add - Ajouter des horaires avec pause (ex. : /add 10h28 20h35 25).\n"
-            "/recap - Obtenir un récapitulatif de ton travail.\n"
-            "/delete - Supprimer toutes tes données.\n"
-            "/info - Voir les instructions pour utiliser /add.\n\n"
-            "Alors, prêt à commencer ? 🚀"
+            "Je suis ton assistant de travail, et apparemment, je dois faire le travail que tu pourrais faire toi-même. 😏\n\n"
+            "Voici ce que je peux faire :\n"
+            "✅ `/add` - Ajoute des horaires (ex. : `/add 10h 18h 30`).\n"
+            "✅ `/recap` - Affiche le résumé de tes sessions de travail.\n"
+            "✅ `/delete` - Supprime tout et fait semblant qu'on ne s'est jamais rencontrés.\n"
+            "✅ `/info` - T'explique comment utiliser `/add`, au cas où tu oublies. 🙄\n\n"
+            "Allez, surprends-moi ! 🚀"
         ),
         "info_message": (
             "💡 **Comment utiliser la commande /add ?**\n\n"
-            "La commande /add fonctionne ainsi :\n"
-            "`/add [début] [fin] [pause]`\n\n"
-            "**Exemple :** `/add 10h28 20h35 25`\n"
-            "- `10h28` : Heure de début.\n"
-            "- `20h35` : Heure de fin.\n"
-            "- `25` : Minutes de pause.\n\n"
-            "Je calculerai automatiquement le temps travaillé en déduisant la pause. 🕒"
+            "Tu entres simplement : `/add [début] [fin] [pause]`\n"
+            "**Exemple :** `/add 10h30 18h 25`\n"
+            "- `10h30` : Heure de début.\n"
+            "- `18h` : Heure de fin (les minutes par défaut sont `00`).\n"
+            "- `25` : Pause en minutes.\n\n"
+            "Facile, non ? Et si tu rates, je te le ferai savoir. 🤓"
         ),
         "add_success": (
-            "✨ Très bien {name}, j'ai ajouté ça : {start} - {end} avec {pause} min de pause.\n"
-            "Total d'heures travaillées : {hours}.\n\n"
-            "Continue comme ça. 🤓"
+            "✨ Très bien, {name}. J'ai enregistré : {start} - {end} avec {pause} min de pause.\n"
+            "Total travaillé : **{hours}**. Impressionnant, non ? 😎"
         ),
         "invalid_format": (
-            "❌ Format invalide. Utilise `/add [début] [fin] [pause]` (ex. : `/add 10h28 20h35 25`)."
+            "❌ Format invalide. Essaye `/add [début] [fin] [pause]`, comme `/add 10h 18h30 15`. 🤦"
         ),
         "invalid_time": (
-            "⏰ Les horaires que tu as entrés sont invalides. Essaye encore. 😒"
+            "⏰ Les horaires que tu as donnés ne sont pas valides. Essaye encore, et ne me fais pas perdre mon temps. 😒"
         ),
-        "no_sessions": "Tu n'as enregistré aucune session. Félicitations pour ton inactivité. 👏",
-        "recap_header": "📋 Voici un récapitulatif de tes sessions de travail :\n",
-        "data_deleted": "🚮 Toutes tes données ont été supprimées.",
+        "no_sessions": "📉 Aucune session enregistrée. Tu te reposes sur tes lauriers, apparemment. 👏",
+        "recap_header": "📋 **Résumé de tes sessions** :\n",
+        "data_deleted": "🚮 Toutes tes données ont été supprimées. Je suis libre maintenant. 🙃",
     }
 }
 
@@ -60,29 +50,32 @@ def get_language(user_id):
     return user_data.get(user_id, {}).get("language", "fr")
 
 def parse_time_format(time_str):
-    """Convertit différents formats d'horaires en HH:MM."""
+    """Simplifie le format des horaires en HH:MM."""
     if "h" in time_str:
         time_str = time_str.replace("h", ":")
-    parts = time_str.split(":")
-    if len(parts) != 2 or not parts[0].isdigit() or not parts[1].isdigit():
+    if len(time_str.split(":")) == 1:  # Si pas de minutes, ajoute ":00"
+        time_str += ":00"
+    try:
+        parts = time_str.split(":")
+        hours, minutes = int(parts[0]), int(parts[1])
+        if 0 <= hours < 24 and 0 <= minutes < 60:
+            return f"{hours:02}:{minutes:02}"
+    except (ValueError, IndexError):
         return None
-    hours, minutes = map(int, parts)
-    if not (0 <= hours < 24 and 0 <= minutes < 60):
-        return None
-    return f"{hours:02}:{minutes:02}"
+    return None
 
 def calculate_hours_minutes(start, end, pause):
-    """Calcule les heures et minutes travaillées en déduisant la pause."""
+    """Calcule le total travaillé en heures et minutes, en déduisant la pause."""
     start_time = datetime.strptime(start, "%H:%M")
     end_time = datetime.strptime(end, "%H:%M")
-    duration = (end_time - start_time).seconds // 60  # Convertir en minutes
+    duration = (end_time - start_time).seconds // 60  # Total en minutes
     total_minutes = max(0, duration - pause)
     hours, minutes = divmod(total_minutes, 60)
     return f"{hours}h{minutes:02}"  # Format HHhMM
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     first_name = update.message.from_user.first_name
-    user_data[user_id] = {"sessions": [], "language": "fr", "total_hours": 0}
+    user_data[user_id] = {"sessions": [], "language": "fr", "total_hours": "0h00"}
     lang = get_language(user_id)
     await update.message.reply_text(LANGUAGES[lang]["start_message"].format(name=first_name))
 
@@ -116,7 +109,7 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     hours_worked = calculate_hours_minutes(start, end, pause)
 
     if user_id not in user_data:
-        user_data[user_id] = {"sessions": [], "language": "fr", "total_hours": 0}
+        user_data[user_id] = {"sessions": [], "language": "fr", "total_hours": "0h00"}
 
     user_data[user_id]["sessions"].append(f"{start}-{end} (Pause : {pause} min)")
     user_data[user_id]["total_hours"] = hours_worked
@@ -129,7 +122,7 @@ async def recap(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     lang = get_language(user_id)
 
-    if user_id not in user_data or "sessions" not in user_data[user_id] or not user_data[user_id]["sessions"]:
+    if user_id not in user_data or not user_data[user_id]["sessions"]:
         await update.message.reply_text(LANGUAGES[lang]["no_sessions"])
         return
 
