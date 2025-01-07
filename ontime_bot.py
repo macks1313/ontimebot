@@ -1,3 +1,100 @@
+<<<<<<< HEAD
+=======
+from telegram import Update
+from telegram.ext import Application, CommandHandler, ContextTypes
+from datetime import datetime, timedelta
+import re
+import pdfkit
+
+# Token du bot Telegram fourni par BotFather
+TOKEN = "7685304448:AAEuMefo6gvKOydyTtRv6pVXLMxvTuJfWr4"
+
+# Dictionnaire pour stocker les données utilisateur
+user_data = {}
+
+# Langues disponibles
+LANGUAGES = {
+    "fr": {
+        "welcome": "Bienvenue sur OnTime Bot ! \n\nVoici les commandes disponibles : \n\n/add arrivée départ - Ajouter une session de travail\n/recap - Voir votre total d'heures travaillées\n/reset - Réinitialiser vos données\n/export - Exporter les données en PDF",
+        "no_sessions": "Aucune session enregistrée. Essayez /add pour commencer !",
+        "invalid_time_format": "Format d'heure invalide. Utilisez HH:MM ou HHhMM.",
+        "session_saved": "Session enregistrée avec succès !",
+        "data_reset": "Données réinitialisées avec succès !",
+        "export_failure": "Erreur lors de l'exportation des données en PDF."
+    },
+    "en": {
+        "welcome": "Welcome to OnTime Bot! \n\nHere are the available commands: \n\n/add start end - Add a work session\n/recap - View your total work hours\n/reset - Reset your data\n/export - Export data to PDF",
+        "no_sessions": "No sessions recorded. Try /add to start!",
+        "invalid_time_format": "Invalid time format. Use HH:MM or HHhMM.",
+        "session_saved": "Session successfully saved!",
+        "data_reset": "Data successfully reset!",
+        "export_failure": "Error occurred while exporting data to PDF."
+    },
+    "uk": {
+        "welcome": "Ласкаво просимо до OnTime Bot! \n\nОсь доступні команди: \n\n/add прибуття відбуття - Додати сесію роботи\n/recap - Переглянути загальний час роботи\n/reset - Скинути дані\n/export - Експортувати дані у PDF",
+        "no_sessions": "Сесій не зареєстровано. Спробуйте /add, щоб розпочати!",
+        "invalid_time_format": "Неправильний формат часу. Використовуйте HH:MM або HHhMM.",
+        "session_saved": "Сесію успішно збережено!",
+        "data_reset": "Дані успішно скинуто!",
+        "export_failure": "Сталася помилка під час експорту даних у PDF."
+    }
+}
+
+# Fonction pour détecter la langue de l'utilisateur
+def get_language(user_id):
+    # Par défaut, on retourne le français
+    return "fr"
+
+# Fonction pour analyser l'heure
+def parse_time(time_str):
+    try:
+        time_str = time_str.replace("h", ":").lower()
+        if "am" in time_str or "pm" in time_str:
+            return datetime.strptime(time_str, "%I:%M%p").time()
+        else:
+            return datetime.strptime(time_str, "%H:%M").time()
+    except ValueError:
+        raise ValueError("Invalid time format")
+
+# Commande /start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    lang = get_language(update.message.from_user.id)
+    await update.message.reply_text(LANGUAGES[lang]["welcome"])
+
+# Commande /add
+async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    lang = get_language(user_id)
+
+    if len(context.args) != 2:
+        await update.message.reply_text(LANGUAGES[lang]["invalid_time_format"])
+        return
+
+    try:
+        arrive_time = parse_time(context.args[0])
+        depart_time = parse_time(context.args[1])
+
+        arrive_datetime = datetime.combine(datetime.today(), arrive_time)
+        depart_datetime = datetime.combine(datetime.today(), depart_time)
+
+        if depart_datetime <= arrive_datetime:
+            await update.message.reply_text(LANGUAGES[lang]["invalid_time_format"])
+            return
+
+        worked_time = depart_datetime - arrive_datetime
+
+        if user_id not in user_data:
+            user_data[user_id] = {"sessions": [], "total_time": timedelta()}
+
+        user_data[user_id]["sessions"].append((arrive_time, depart_time, worked_time))
+        user_data[user_id]["total_time"] += worked_time
+
+        await update.message.reply_text(LANGUAGES[lang]["session_saved"])
+
+    except ValueError:
+        await update.message.reply_text(LANGUAGES[lang]["invalid_time_format"])
+
+>>>>>>> bdc21e8 (Fix missing import for Update)
 # Commande /recap
 async def recap(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
@@ -71,4 +168,7 @@ application.add_handler(CommandHandler("export", export))
 
 if __name__ == "__main__":
     application.run_polling()
+<<<<<<< HEAD
 
+=======
+>>>>>>> bdc21e8 (Fix missing import for Update)
