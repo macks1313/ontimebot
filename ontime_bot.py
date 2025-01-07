@@ -1,51 +1,78 @@
-# ontime_bot_with_ai.py
-import logging
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
-from transformers import pipeline
+from telegram import Update, Bot
+from telegram.ext import Updater, CommandHandler, CallbackContext
+import re
 
-# Configurer le journal
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
-logger = logging.getLogger(__name__)
+# Data storage for work hours
+data = {}
 
-# Charger le pipeline GPT-like (sarcastique)
-sarcastic_generator = pipeline("text-generation", model="gpt2")
-
-# Gérer la commande /start
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(
-        "Salut ! Je suis ontime_bot, ton bot sarcastique boosté à l'IA. Pose-moi une question, et je vais répondre avec mon intelligence supérieure (et un peu de sarcasme). 😏"
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text(
+        "Salut ! Je suis votre bot assistant de calcul d'heures de travail. Utilisez /h pour ajouter des heures, et d'autres commandes sympas sont en route ! \ud83d\ude80"
     )
 
-# Gérer les messages avec IA
-async def respond(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_message = update.message.text
-    try:
-        # Générer une réponse sarcastique avec GPT
-        response = sarcastic_generator(
-            f"Fais une réponse sarcastique à : {user_message}",
-            max_length=50,
-            num_return_sequences=1,
-        )[0]["generated_text"]
-        await update.message.reply_text(response)
-    except Exception as e:
-        logger.error(f"Erreur dans la génération de texte : {e}")
-        await update.message.reply_text(
-            "Oups ! Je crois que mon cerveau (d'IA) a eu un problème. Essaye encore !"
-        )
+def calculate_hours(start: str, end: str, break_minutes: int):
+    start_hours, start_minutes = map(int, start.split('h'))
+    end_hours, end_minutes = map(int, end.split('h'))
 
-# Configuration principale
+    start_total_minutes = start_hours * 60 + start_minutes
+    end_total_minutes = end_hours * 60 + end_minutes
+
+    total_work_minutes = end_total_minutes - start_total_minutes - break_minutes
+    work_hours = total_work_minutes // 60
+    work_minutes = total_work_minutes % 60
+
+    return work_hours, work_minutes
+
+def handle_hours(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    text = " ".join(context.args)
+
+    match = re.match(r"(\d+h\d+)\s+(\d+h\d+)\s+(\d+)", text)
+    if not match:
+        update.message.reply_text("Oups ! Format incorrect. Utilisez : /h 8h45 19h30 25")
+        return
+
+    start_time, end_time, break_minutes = match.groups()
+    work_hours, work_minutes = calculate_hours(start_time, end_time, int(break_minutes))
+
+    if user_id not in data:
+        data[user_id] = 0
+
+    total_minutes = work_hours * 60 + work_minutes
+    data[user_id] += total_minutes
+
+    update.message.reply_text(
+        f"Vous avez travaillé {work_hours} heures et {work_minutes} minutes aujourd'hui \ud83d\udcbc. \n"
+        f"Total cumulé : {data[user_id] // 60} heures et {data[user_id] % 60} minutes. \ud83d\udcc8"
+    )
+
+def reset_data(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    if user_id in data:
+        del data[user_id]
+        update.message.reply_text("Toutes vos données ont été supprimées. C'est reparti de zéro ! \ud83d\udeaa")
+    else:
+        update.message.reply_text("Pas de données à supprimer pour le moment. Profitez de votre temps libre ! \ud83c\udf89")
+
+def joke(update: Update, context: CallbackContext):
+    update.message.reply_text("Pourquoi les développeurs aiment-ils le café ? Parce qu'ils aiment le code java ! \ud83d\ude09")
+
+def motivation(update: Update, context: CallbackContext):
+    update.message.reply_text("N'oubliez pas : chaque minute compte ! \ud83c\udfc6 \nGagnez la journée, une heure à la fois. \u2728")
+
 def main():
-    token = "7685304448:AAEuMefo6gvKOydyTtRv6pVXLMxvTuJfWr4"  # Votre token ici
+    bot_token = "7685304448:AAEuMefo6gvKOydyTtRv6pVXLMxvTuJfWr4"
+    updater = Updater(bot_token)
 
-    app = ApplicationBuilder().token(token).build()
+    dp = updater.dispatcher
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("h", handle_hours))
+    dp.add_handler(CommandHandler("reset", reset_data))
+    dp.add_handler(CommandHandler("joke", joke))
+    dp.add_handler(CommandHandler("motivation", motivation))
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, respond))
-
-    app.run_polling()
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == "__main__":
     main()
