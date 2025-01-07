@@ -2,7 +2,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 # Créez l'application avec votre clé Telegram
-application = Application.builder().token("7685304448:AAEuMefo6gvKOydyTtRv6pVXLMxvTuJfWr4").build()
+app = Application.builder().token("7685304448:AAEuMefo6gvKOydyTtRv6pVXLMxvTuJfWr4").build()
 
 # Fonction utilitaire pour échapper les caractères spéciaux pour MarkdownV2
 def escape_markdown_v2(text):
@@ -142,5 +142,5 @@ async def save_session(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(LANGUAGES[lang]["session_saved"])
 
 if __name__ == "__main__":
-    application.run_polling()
+    app.run_polling()
 
