@@ -1,6 +1,9 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
+# Votre token Telegram (méthode directe)
+TOKEN = "7685304448:AAEuMefo6gvKOydyTtRv6pVXLMxvTuJfWr4"
+
 # Fonction utilitaire pour échapper les caractères spéciaux pour MarkdownV2
 def escape_markdown_v2(text):
     special_characters = r"_*[]()~`>#+-=|{}.!"
