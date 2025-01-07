@@ -1,46 +1,76 @@
+# Partie A : Initialisation et gestion des commandes principales
+
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
-import os
 
-# Configuration du bot avec le token
+# Votre TOKEN ici
 TOKEN = "7685304448:AAEuMefo6gvKOydyTtRv6pVXLMxvTuJfWr4"
-app = Application.builder().token(TOKEN).build()
 
-# Dictionnaire des langues prises en charge
+# Langues disponibles
 LANGUAGES = {
     "en": {
-        "start": "Welcome! I am your assistant bot.",
-        "help": "You can use commands like /add, /recap, /save_session.",
-        "add_success": "Added to the current session.",
-        "recap_header": "Here is the recap of your sessions:",
-        "session_saved": "Session saved successfully.",
-        "no_sessions": "You have no sessions recorded.",
-        "no_active_session": "No active session to save.",
-        "lang_set": "Language set to English."
+        "start_message": (
+            "Oh, great, another human trying to be productive. Welcome! Here are the things I *begrudgingly* do:\n\n"
+            "- /add [text]: Add something to your current session. I won't judge.\n"
+            "- /recap: Get a recap of your sessions so far. Spoiler: They're amazing, right?\n"
+            "- /save: Save your current session. Because, you know, memories.\n"
+            "- /set_language [en/fr/uk]: Change my language.\n"
+        ),
+        "help_message": "Need help? Typical. Here's what I do:\n/add, /recap, /save, /set_language. Try them.",
+        "add_success": "Added. Because your input is *so* valuable.",
+        "no_sessions": "No sessions? Wow, productive much?",
+        "recap_header": "Here's your recap. Prepare to be amazed:",
+        "no_active_session": "No active session. What are you even doing?",
+        "session_saved": "Session saved. You're welcome.",
+        "language_set": "Language set to English.",
     },
     "fr": {
-        "start": "Bienvenue ! Je suis votre bot assistant.",
-        "help": "Vous pouvez utiliser des commandes comme /add, /recap, /save_session.",
-        "add_success": "Ajouté à la session en cours.",
-        "recap_header": "Voici le récapitulatif de vos sessions :",
-        "session_saved": "Session enregistrée avec succès.",
-        "no_sessions": "Vous n'avez aucune session enregistrée.",
-        "no_active_session": "Aucune session active à enregistrer.",
-        "lang_set": "Langue définie sur le français."
-    }
+        "start_message": (
+            "Oh, génial, encore un humain qui veut être productif. Bienvenue ! Voici ce que je *supporte* de faire :\n\n"
+            "- /add [texte] : Ajoute quelque chose à votre session en cours. Aucun jugement.\n"
+            "- /recap : Obtenez un récapitulatif de vos sessions. Spoiler : elles sont incroyables, non ?\n"
+            "- /save : Sauvegardez votre session actuelle. Parce que, vous savez, les souvenirs.\n"
+            "- /set_language [en/fr/uk] : Changez ma langue.\n"
+        ),
+        "help_message": "Besoin d'aide ? Classique. Voici ce que je fais :\n/add, /recap, /save, /set_language. Essayez-les.",
+        "add_success": "Ajouté. Parce que votre saisie est *tellement* précieuse.",
+        "no_sessions": "Aucune session ? Impressionnant de productivité.",
+        "recap_header": "Voici votre récapitulatif. Préparez-vous à être émerveillé :",
+        "no_active_session": "Aucune session active. Qu'est-ce que vous faites ?",
+        "session_saved": "Session sauvegardée. De rien.",
+        "language_set": "Langue définie sur le français.",
+    },
+    "uk": {
+        "start_message": (
+            "О, чудово, ще одна людина намагається бути продуктивною. Ласкаво просимо! Ось, що я *вимушено* роблю:\n\n"
+            "- /add [текст]: Додає щось до вашої поточної сесії. Без суджень.\n"
+            "- /recap: Отримайте огляд ваших сесій. Спойлер: вони чудові, правда?\n"
+            "- /save: Збережіть свою поточну сесію. Тому що, знаєте, спогади.\n"
+            "- /set_language [en/fr/uk]: Змініть мою мову.\n"
+        ),
+        "help_message": "Потрібна допомога? Очікувано. Ось що я роблю:\n/add, /recap, /save, /set_language. Спробуйте.",
+        "add_success": "Додано. Бо ваш внесок *такий* цінний.",
+        "no_sessions": "Немає сесій? Вау, продуктивно.",
+        "recap_header": "Ось ваш огляд. Готуйтеся до здивувань:",
+        "no_active_session": "Немає активної сесії. Що ви робите?",
+        "session_saved": "Сесію збережено. Не дякуйте.",
+        "language_set": "Мову змінено на українську.",
+    },
 }
+
+# Dictionnaire global pour stocker les données utilisateur
+user_data = {}
+
+# Fonction utilitaire pour obtenir la langue de l'utilisateur
+def get_language(user_id):
+    return user_data.get(user_id, {}).get("language", "en")
 
 # Commande /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     user_data[user_id] = {"sessions": [], "language": "en"}
     lang = get_language(user_id)
-    await update.message.reply_text(LANGUAGES[lang]["start"])
-
-# Commande /help
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    lang = get_language(update.message.from_user.id)
-    await update.message.reply_text(LANGUAGES[lang]["help"])
+    await update.message.reply_text(LANGUAGES[lang]["start_message"], parse_mode="Markdown")
 
 # Commande pour changer de langue
 async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -49,15 +79,11 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if lang_code in LANGUAGES:
         user_data[user_id]["language"] = lang_code
-        await update.message.reply_text(LANGUAGES[lang_code]["lang_set"])
+        await update.message.reply_text(LANGUAGES[lang_code]["language_set"])
     else:
-        await update.message.reply_text("Language not supported.")
-# Dictionnaire global pour stocker les données utilisateur
-user_data = {}
+        await update.message.reply_text("Language not supported. Try: en, fr, uk.")
 
-# Fonction utilitaire pour obtenir la langue d'un utilisateur
-def get_language(user_id):
-    return user_data.get(user_id, {}).get("language", "en")
+# Partie B : Commandes pour gérer les sessions et les récapitulatifs
 
 # Commande /add
 async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -89,7 +115,7 @@ async def recap(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(recap_message)
 
-# Commande /save_session
+# Commande /save
 async def save_session(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     lang = get_language(user_id)
@@ -98,18 +124,23 @@ async def save_session(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(LANGUAGES[lang]["no_active_session"])
         return
 
+    # Enregistrer la session actuelle
     user_data[user_id]["sessions"].append(user_data[user_id]["current_session"])
     user_data[user_id].pop("current_session")
     await update.message.reply_text(LANGUAGES[lang]["session_saved"])
 
 # Ajout des handlers
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("help", help_command))
-app.add_handler(CommandHandler("set_language", set_language))
-app.add_handler(CommandHandler("add", add))
-app.add_handler(CommandHandler("recap", recap))
-app.add_handler(CommandHandler("save_session", save_session))
+def main():
+    application = Application.builder().token(TOKEN).build()
 
-# Lancement de l'application
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("set_language", set_language))
+    application.add_handler(CommandHandler("add", add))
+    application.add_handler(CommandHandler("recap", recap))
+    application.add_handler(CommandHandler("save", save_session))
+
+    print("Bot is running... sarcastically.")
+    application.run_polling()
+
 if __name__ == "__main__":
-    app.run_polling()
+    main()
