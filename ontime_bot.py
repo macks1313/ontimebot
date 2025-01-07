@@ -92,7 +92,7 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text(LANGUAGES[lang]["invalid_time_format"])
 
-bdc21e8 (Fix missing import for Update)
+(Fix missing import for Update)
 # Commande /recap
 async def recap(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
